@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from .models import Listing
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from listings.choices import price_choices, bedroom_choices, province_choices
 
 # Create your views here.
 
@@ -26,4 +27,47 @@ def listing(request, listing_id):
 
 
 def search(request):
-    return render(request, 'listings/search.html')
+    queryset_list = Listing.objects.order_by('-list_date')
+
+    #keywords
+    if 'keywords' in request.GET:
+        keywords = request.GET['keywords']
+        if keywords:
+            queryset_list = queryset_list.filter(description__icontains=keywords)
+
+    #city
+    if 'city' in request.GET:
+        city = request.GET['city']
+        if city:
+            queryset_list = queryset_list.filter(city__iexact=city)
+    
+    #province
+    if 'province' in request.GET:
+        province = request.GET['province']
+        if province != 'ALL':
+            queryset_list = queryset_list.filter(province__iexact=province)
+    
+    #bedrooms
+    if 'bedrooms' in request.GET:
+        bedrooms = request.GET['bedrooms']
+        if bedrooms:
+            queryset_list = queryset_list.filter(bedrooms__lte=bedrooms)
+
+    #price
+    if 'price' in request.GET:
+        price = request.GET['price']
+        if price:
+            queryset_list = queryset_list.filter(price__lte=price)
+    
+    paginator = Paginator(queryset_list, 3)
+    page = request.GET.get('page')
+    paged_listings = paginator.get_page(page)
+    
+    context = {
+        'price_choices': price_choices,
+        'bedroom_choices': bedroom_choices,
+        'province_choices': province_choices,
+        'listings': paged_listings,
+        'values': request.GET
+    }
+    return render(request, 'listings/search.html', context)
